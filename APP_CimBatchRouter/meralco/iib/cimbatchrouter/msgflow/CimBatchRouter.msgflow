@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ecore:EPackage xmi:version="2.0"
+    xmlns:xmi="http://www.omg.org/XMI" xmlns:ComIbmCompute.msgnode="ComIbmCompute.msgnode" xmlns:ComIbmEmailOutput.msgnode="ComIbmEmailOutput.msgnode" xmlns:ComIbmFileInput.msgnode="ComIbmFileInput.msgnode" xmlns:ComIbmMQOutput.msgnode="ComIbmMQOutput.msgnode" xmlns:ComIbmWSInput.msgnode="ComIbmWSInput.msgnode" xmlns:ComIbmWSReply.msgnode="ComIbmWSReply.msgnode" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:eflow="http://www.ibm.com/wbi/2005/eflow" xmlns:utility="http://www.ibm.com/wbi/2005/eflow_utility" nsURI="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter.msgflow"
+    nsPrefix="meralco_iib_cimbatchrouter_msgflow_CimBatchRouter.msgflow">
+  <eClassifiers xmi:type="eflow:FCMComposite" name="FCMComposite_1">
+    <eSuperTypes href="http://www.ibm.com/wbi/2005/eflow#//FCMBlock"/>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_LOG_CONFIG" name="UDP_LOG_CONFIG" lowerBound="1" defaultValueLiteral="/var/mqsi/Meralco-AMIIS-Integration/log4j/log4j.xml">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_APP_NAME" name="UDP_APP_NAME" lowerBound="1" defaultValueLiteral="APP_CimBatchRouter">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_CS_TYPE" name="UDP_CS_TYPE" lowerBound="1" defaultValueLiteral="UserDefined">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_CS_EMAIL" name="UDP_CS_EMAIL" lowerBound="1" defaultValueLiteral="EmailRecipients">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_CS_EMAIL_KEY" name="UDP_CS_EMAIL_KEY" lowerBound="1" defaultValueLiteral="CimBatchRouterEmailRecipients">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_EMAIL_SUBJECT" name="UDP_EMAIL_SUBJECT" lowerBound="1" defaultValueLiteral="Error Notification on Cim Batch Router">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_EMAIL_BODY" name="UDP_EMAIL_BODY" lowerBound="1" defaultValueLiteral="Error Encountered in DEV environment: Invocation of Service Provider. Please Contact ESB/IIB Team.">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <eStructuralFeatures xmi:type="ecore:EAttribute" xmi:id="Property.UDP_REPLY_ADDRESS" name="UDP_REPLY_ADDRESS" lowerBound="1" defaultValueLiteral="http://api-dev.meralco.meralcogroup:9082/Customer/AMIIS/HandleR2Response">
+      <eType xmi:type="ecore:EDataType" href="http://www.eclipse.org/emf/2002/Ecore#//EString"/>
+    </eStructuralFeatures>
+    <translation xmi:type="utility:TranslatableString" key="CimBatchRouter" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+    <colorGraphic16 xmi:type="utility:GIFFileGraphic" resourceName="platform:/plugin/APP_CimBatchRouter/icons/full/obj16/CimBatchRouter.gif"/>
+    <colorGraphic32 xmi:type="utility:GIFFileGraphic" resourceName="platform:/plugin/APP_CimBatchRouter/icons/full/obj30/CimBatchRouter.gif"/>
+    <composition>
+      <nodes xmi:type="ComIbmFileInput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_1" location="21,196" inputDirectory="/var/Cim_Batch" filenamePattern="PSSPPSTD*.csv" processedFileAction="moveToArchiveWithTimestamp" messageDomainProperty="DFDL" messageTypeProperty="{}:PSSPPSTD" recordDetection="parsedRecordSequence" skipFirstRecord="true">
+        <translation xmi:type="utility:ConstantString" string="File Input"/>
+        <longDescription xmi:type="utility:ConstantString" string="Retrieves the CSV file  of of PEMS."/>
+      </nodes>
+      <nodes xmi:type="ComIbmMQOutput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_2" location="440,192" queueName="AMIIS.CIMREQUEST.IN">
+        <translation xmi:type="utility:ConstantString" string="MQ Output"/>
+        <longDescription xmi:type="utility:ConstantString" string="Puts the provider request message in AMIIS.CIMREQUEST.IN queue."/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_3" location="147,63" computeExpression="esql://routine/meralco.esb.amiis.common.esql#ErrorHandler.Main">
+        <translation xmi:type="utility:ConstantString" string="ErrorHandler"/>
+        <longDescription xmi:type="utility:ConstantString" string="Routes the error messages. "/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_4" location="270,63" computeExpression="esql://routine/meralco.esb.amiis.common.esql#PrepareEmailRequest.Main">
+        <translation xmi:type="utility:ConstantString" string="PrepareEmailRequest"/>
+        <longDescription xmi:type="utility:ConstantString" string="Creates email base on the error message."/>
+      </nodes>
+      <nodes xmi:type="ComIbmEmailOutput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_5" location="436,63" smtpServer="10.80.2.30:25" fromAddress="esip.integration.dev@meralco.com.ph">
+        <translation xmi:type="utility:ConstantString" string="Email Output"/>
+        <longDescription xmi:type="utility:ConstantString" string="Sends email using SMTP."/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_6" location="138,191" computeExpression="esql://routine/meralco.iib.cimbatchrouter.esql#Initialize.Main">
+        <translation xmi:type="utility:ConstantString" string="InitializeMessage"/>
+        <longDescription xmi:type="utility:ConstantString" string="Initializes the request given by PEMS, logs the consumer request."/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_7" location="279,192" computeExpression="esql://routine/meralco.iib.cimbatchrouter.esql#PrepareRequest.Main" computeMode="all">
+        <translation xmi:type="utility:ConstantString" string="ComposeRequest"/>
+        <longDescription xmi:type="utility:ConstantString" string="Function where the transformation of CSV file request to XML takes place."/>
+      </nodes>
+      <nodes xmi:type="ComIbmWSInput.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_8" location="16,291" URLSpecifier="/Customer/amiis/CIMBatchRouter/updateConfig">
+        <translation xmi:type="utility:ConstantString" string="HTTP Input"/>
+        <longDescription xmi:type="utility:ConstantString" string="Endpoint of the APP Cim Batch Router where the update of configuration services will occur."/>
+      </nodes>
+      <nodes xmi:type="ComIbmCompute.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_9" location="149,287" computeExpression="esql://routine/com.indra.meralco.common.esql#ClearConfigService.Main">
+        <translation xmi:type="utility:ConstantString" string="Clear Config"/>
+        <longDescription xmi:type="utility:ConstantString" string="Function where the clearing of configuration services takes place."/>
+      </nodes>
+      <nodes xmi:type="ComIbmWSReply.msgnode:FCMComposite_1" xmi:id="FCMComposite_1_10" location="285,288">
+        <translation xmi:type="utility:ConstantString" string="HTTP Reply"/>
+        <longDescription xmi:type="utility:ConstantString" string="Send the reply back to the consumer."/>
+      </nodes>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_1" targetNode="FCMComposite_1_3" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.failure" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_2" targetNode="FCMComposite_1_3" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.catch" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_5" targetNode="FCMComposite_1_5" sourceNode="FCMComposite_1_4" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_6" targetNode="FCMComposite_1_6" sourceNode="FCMComposite_1_1" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_7" targetNode="FCMComposite_1_2" sourceNode="FCMComposite_1_7" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_8" targetNode="FCMComposite_1_7" sourceNode="FCMComposite_1_6" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_9" targetNode="FCMComposite_1_3" sourceNode="FCMComposite_1_5" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in">
+        <bendPoints>25,-69,316,-69</bendPoints>
+        <bendPoints>-154,-70,137,-70</bendPoints>
+        <bendPoints>-316,-71,-25,-71</bendPoints>
+      </connections>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_3" targetNode="FCMComposite_1_9" sourceNode="FCMComposite_1_8" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_10" targetNode="FCMComposite_1_10" sourceNode="FCMComposite_1_9" sourceTerminalName="OutTerminal.out" targetTerminalName="InTerminal.in"/>
+      <connections xmi:type="eflow:FCMConnection" xmi:id="FCMConnection_4" targetNode="FCMComposite_1_4" sourceNode="FCMComposite_1_3" sourceTerminalName="OutTerminal.out1" targetTerminalName="InTerminal.in"/>
+    </composition>
+    <propertyOrganizer>
+      <propertyDescriptor groupName="Group.Basic" configurable="true" userDefined="true" describedAttribute="Property.UDP_LOG_CONFIG">
+        <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_LOG_CONFIG" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+        <propertyDescriptor groupName="Group.Basic" configurable="true" userDefined="true" describedAttribute="Property.UDP_APP_NAME">
+          <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_APP_NAME" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+          <propertyDescriptor groupName="Group.Email" configurable="true" userDefined="true" describedAttribute="Property.UDP_CS_TYPE">
+            <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_CS_TYPE" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+            <propertyDescriptor groupName="Group.Email" configurable="true" userDefined="true" describedAttribute="Property.UDP_CS_EMAIL">
+              <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_CS_EMAIL" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+              <propertyDescriptor groupName="Group.Email" configurable="true" userDefined="true" describedAttribute="Property.UDP_CS_EMAIL_KEY">
+                <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_CS_EMAIL_KEY" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+                <propertyDescriptor groupName="Group.Email" configurable="true" userDefined="true" describedAttribute="Property.UDP_EMAIL_SUBJECT">
+                  <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_EMAIL_SUBJECT" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+                  <propertyDescriptor groupName="Group.Email" configurable="true" userDefined="true" describedAttribute="Property.UDP_EMAIL_BODY">
+                    <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_EMAIL_BODY" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+                    <propertyDescriptor groupName="Group.Basic" configurable="true" userDefined="true" describedAttribute="Property.UDP_REPLY_ADDRESS">
+                      <propertyName xmi:type="utility:TranslatableString" key="Property.UDP_REPLY_ADDRESS" bundleName="meralco/iib/cimbatchrouter/msgflow/CimBatchRouter" pluginId="APP_CimBatchRouter"/>
+                    </propertyDescriptor>
+                  </propertyDescriptor>
+                </propertyDescriptor>
+              </propertyDescriptor>
+            </propertyDescriptor>
+          </propertyDescriptor>
+        </propertyDescriptor>
+      </propertyDescriptor>
+    </propertyOrganizer>
+    <stickyBoard/>
+  </eClassifiers>
+</ecore:EPackage>

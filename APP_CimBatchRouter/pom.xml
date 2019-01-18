@@ -1,0 +1,221 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.indra.meralco.customer</groupId>
+	<artifactId>APP_CimBatchRouter</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>pom</packaging>
+	<name>CimBatchRouter</name>
+	<description>CimBatchRouter</description>
+
+	<properties>
+		<app_base_path>${WORKSPACE}/${PARENT_DIR}</app_base_path>
+		<service_name>${JOB_BASE_NAME}</service_name>
+
+
+		<!-- BAR NAME -->
+		<bar_name>BAR_${project.name}-${ENV}.${MAJOR_VERSION}.${BUILD_NUMBER}.bar</bar_name>
+		<old_bar_name>BAR_${project.name}-${OLD_ENV}.${MAJOR_VERSION}.${TARGET_BUILD_NUMBER}.bar</old_bar_name>
+		<test_bar_name>BAR_${project.name}-${TEST_ENV}.${MAJOR_VERSION}.${BUILD_NUMBER}.bar</test_bar_name>
+
+		<!-- BAR FULL PATH -->
+		<bar_file>${BASE_BAR_LOCATION}/${ENV}/${bar_name}</bar_file>
+		<old_bar_file>${BASE_BAR_LOCATION}/${OLD_ENV}/${old_bar_name}</old_bar_file>
+		<test_bar_file>${BASE_BAR_LOCATION}/${TEST_ENV}/${test_bar_name}</test_bar_file>
+
+		<!-- OVERRIDE -->
+		<override>${app_base_path}/Build_Config/${project.artifactId}/${ENV}.override</override>
+		<test_override>${app_base_path}/Build_Config/${project.artifactId}/${TEST_ENV}.override</test_override>
+
+		<!-- CONNECTION -->
+		<broker_connection>${app_base_path}/Build_Config/Brokers/${ENV}.${BROKER_NAME}.broker</broker_connection>
+		<test_broker_connection>${app_base_path}/Build_Config/Brokers/${TEST_ENV}.${TEST_BROKER_NAME}.broker</test_broker_connection>
+
+		
+		<skip_compile>${skip.compile}</skip_compile>
+		<skip_test>${skip.test}</skip_test>
+		<skip_verify>${skip.verify}</skip_verify>
+		<skip_install>${skip.install}</skip_install>
+		<skip_package>${skip.package}</skip_package>
+		<skip_deploy>${skip.deploy}</skip_deploy>
+	</properties>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>1.5.0</version>
+				<configuration>
+					<skip>${skip.compile}</skip>
+				</configuration>
+				<executions>
+					<!-- DEV -->
+					<!-- Create BAR File -->
+					<execution>
+						<id>bar-${project.name}</id>
+						<phase>compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_compile}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsipackagebarscript.sh</argument>
+								<argument>-w</argument>
+								<argument>${app_base_path}</argument>
+								<argument>-a</argument>
+								<argument>${bar_file}</argument>
+								<argument>-k</argument>
+								<argument>${project.artifactId}</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!-- TEST -->
+					<execution>
+						<id>override-test-${project.name}</id>
+						<phase>test-compile</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_test}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsiapplybaroverrideScript.sh</argument>
+								<argument>-b</argument>
+								<argument>${bar_file}</argument>
+								<argument>-o</argument>
+								<argument>${test_bar_file}</argument>
+								<!-- do not remove the space before the -p -->
+								<argument> -p</argument>
+								<argument>${test_override}</argument>
+								<argument>-r</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>deploy-test-${project.name}</id>
+						<phase>process-test-classes</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_test}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsideployScript.sh</argument>
+								<argument> -n</argument>
+								<argument>${test_broker_connection}</argument>
+								<argument> -e</argument>
+								<argument>${TEST_ENV_EG}</argument>
+								<argument> -a</argument>
+								<argument>${test_bar_file}</argument>
+								<argument> -w</argument>
+								<argument>300</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>monitoring-test-${project.name}</id>
+						<phase>process-test-classes</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_test}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsichangeflowmonitoring.sh</argument>
+								<argument>${TEST_BROKER_NAME}</argument>
+								<argument>-e</argument>
+								<argument>${TEST_ENV_EG}</argument>
+								<argument>-k</argument>
+								<argument>${TEST_APP_NAME}</argument>
+								<argument>-f</argument>
+								<argument>${TEST_MSGFLOW_NAME}</argument>
+								<argument>-m</argument>
+								<argument>${TEST_MONITOR_NAME}</argument>
+								<argument>-c</argument>
+								<argument>active</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!-- OVERRIDE -->
+					<execution>
+						<id>override-package-${project.name}</id>
+						<phase>package</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_package}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsiapplybaroverrideScript.sh</argument>
+								<argument>-b</argument>
+								<argument>${old_bar_file}</argument>
+								<argument>-o</argument>
+								<argument>${bar_file}</argument>
+								<!-- do not remove the space before the -p -->
+								<argument> -p</argument>
+								<argument>${override}</argument>
+								<argument>-r</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<!-- DEPLOY -->
+					<execution>
+						<id>override-deploy-${project.name}</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_verify}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsiapplybaroverrideScript.sh</argument>
+								<argument>-b</argument>
+								<argument>${bar_file}</argument>
+								<!-- do not remove the space before the -p -->
+								<argument> -p</argument>
+								<argument>${override}</argument>
+								<argument>-r</argument>
+							</arguments>
+						</configuration>
+					</execution>
+					<execution>
+						<id>install-${project.name}</id>
+						<phase>install</phase>
+						<goals>
+							<goal>exec</goal>
+						</goals>
+						<configuration>
+							<skip>${skip_install}</skip>
+							<executable>sh</executable>
+							<workingDirectory>${mqsi_bin_home_v10}</workingDirectory>
+							<arguments>
+								<argument>mqsideployScript.sh</argument>
+								<argument> -n</argument>
+								<argument>${broker_connection}</argument>
+								<argument> -e</argument>
+								<argument>${EG}</argument>
+								<argument> -a</argument>
+								<argument>${bar_file}</argument>
+								<argument> -w</argument>
+								<argument>300</argument>
+							</arguments>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+</project>

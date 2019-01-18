@@ -1,0 +1,50 @@
+BROKER SCHEMA meralco.iib.cimbatchrouter.esql
+PATH meralco.esb.amiis.common.esql;
+
+CREATE COMPUTE MODULE Initialize
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE envRef REFERENCE TO Environment;
+		DECLARE inRootRef REFERENCE TO InputRoot;
+		DECLARE outRootRef REFERENCE TO OutputRoot;
+		DECLARE inLocalEnvRef REFERENCE TO InputLocalEnvironment;
+		DECLARE outLocalEnvRef REFERENCE TO OutputLocalEnvironment;
+		DECLARE rc BOOLEAN FALSE;
+		DECLARE meterNo CHARACTER;
+		
+		SET outRootRef = inRootRef;
+		SET meterNo = FIELDVALUE(inRootRef.*:DFDL.*:PSSPPSTD.*:record.*:METERNO);
+		
+		--Since File input does not have transaction ID, we will be using the timestamp instead.
+		SET envRef.TransactionId = meterNo || CAST(CURRENT_TIMESTAMP AS CHARACTER FORMAT 'SSSSSssmmHHddMMyy');
+		
+		CALL saveTransactionId(inRootRef, inLocalEnvRef, envRef);		
+		CALL logMessage(outRootRef, UDP_APP_NAME, UDP_LOG_CONFIG, 'CONSUMER_REQUEST', envRef) INTO rc;
+				
+		--Store transaction ID in MQFRH2
+		CALL transactionIdJump(outRootRef, envRef);
+		CALL setEventKey(envRef, 'Compute');
+
+		RETURN rc;
+	END;
+	
+	CREATE PROCEDURE transactionIdJump(IN rootRef REFERENCE, INOUT envRef REFERENCE)
+	BEGIN
+		DECLARE transactionId CHARACTER envRef.TransactionId;
+		IF NOT EXISTS(rootRef.MQRFH2[]) THEN
+			-- Try to create MQMD
+			IF NOT EXISTS(rootRef.MQMD[]) THEN
+				CREATE NEXTSIBLING OF rootRef.Properties DOMAIN 'MQMD';
+				SET rootRef.MQMD.Version = MQMD_CURRENT_VERSION;
+				SET rootRef.MQMD.Format = MQFMT_RF_HEADER_2;		
+			END IF;
+			-- create mqrfh2
+			CREATE NEXTSIBLING OF rootRef.MQMD DOMAIN 'MQRFH2';
+			SET rootRef.MQRFH2.(MQRFH2.Field)Version = MQRFH_VERSION_2;
+			SET rootRef.MQRFH2.(MQRFH2.Field)Format = MQFMT_STRING;
+		END IF;
+		IF NOT EXISTS(rootRef.MQRFH2.usr.TransactionId[]) THEN
+			SET rootRef.MQRFH2.usr.TransactionId = transactionId;
+		END IF;
+	END;
+END MODULE;

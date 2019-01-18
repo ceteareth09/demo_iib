@@ -1,0 +1,134 @@
+BROKER SCHEMA meralco.iib.cimbatchrouter.esql
+PATH meralco.esb.amiis.common.esql;
+
+DECLARE UDP_LOG_CONFIG EXTERNAL CHARACTER '';
+DECLARE UDP_APP_NAME EXTERNAL CHARACTER '';
+DECLARE UDP_REPLY_ADDRESS EXTERNAL CHARACTER '';
+
+DECLARE ns1 NAMESPACE 'http://www.iec.ch/TC57/2008/schema/message';
+DECLARE ns2 NAMESPACE 'http://www.docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd';
+DECLARE ns3 NAMESPACE 'http://iec.ch/TC57/2009/MeterReadings#';
+DECLARE ns4 NAMESPACE 'http://www.docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd';
+DECLARE ns5 NAMESPACE 'http://iec.ch/TC57/2009/EndDeviceControls#';
+DECLARE ns6 NAMESPACE 'http://iec.ch/TC57/2009/EndDeviceAssets#';
+DECLARE ns7 NAMESPACE 'http://iec.ch/TC57/2009/EndDeviceEvents#';
+DECLARE ns8 NAMESPACE 'http://iec.ch/TC57/2009/GetMeterReadings#';
+DECLARE soapenv NAMESPACE 'http://schemas.xmlsoap.org/soap/envelope/';
+
+CREATE COMPUTE MODULE PrepareRequest
+	CREATE FUNCTION Main() RETURNS BOOLEAN
+	BEGIN
+		DECLARE envRef REFERENCE TO Environment;
+		DECLARE inRootRef REFERENCE TO InputRoot;
+		DECLARE outRootRef REFERENCE TO OutputRoot;
+		DECLARE inLocalEnvRef REFERENCE TO InputLocalEnvironment;
+		DECLARE outLocalEnvRef REFERENCE TO OutputLocalEnvironment;
+		DECLARE messageID CHARACTER UUIDASCHAR;
+		DECLARE correlationID CHARACTER UUIDASCHAR;
+		DECLARE rc BOOLEAN FALSE;
+		
+		DECLARE sin INTEGER;
+		DECLARE status CHARACTER;
+		DECLARE meterNo CHARACTER;
+		DECLARE dateIssued CHARACTER;
+			
+		SET sin = FIELDVALUE(inRootRef.*:DFDL.*:PSSPPSTD.*:record.*:SIN);
+		SET status = FIELDVALUE(inRootRef.*:DFDL.*:PSSPPSTD.*:record.*:LCSUBSTATE);
+		SET meterNo = FIELDVALUE(inRootRef.*:DFDL.*:PSSPPSTD.*:record.*:METERNO);
+		SET dateIssued = FIELDVALUE(inRootRef.*:DFDL.*:PSSPPSTD.*:record.*:PSSPPSTDSINCE);
+		
+		CALL encloseToSoapEnv(outRootRef);
+ 		CALL createRequest(outRootRef, dateIssued, meterNo, messageID, correlationID, envRef, status, rc);
+ 		CALL logMessage(outRootRef, UDP_APP_NAME, UDP_LOG_CONFIG, 'PROVIDER_REQUEST', envRef) INTO rc;
+ 		
+		RETURN true;
+	END;
+	
+	CREATE FUNCTION createRequest(INOUT outRootRef REFERENCE, INOUT dateIssued CHARACTER, INOUT meterNo CHARACTER, INOUT messageID CHARACTER, INOUT correlationID CHARACTER, INOUT envRef REFERENCE, INOUT status CHARACTER, INOUT rc BOOLEAN)
+	BEGIN
+--		set the namespace of the message tree
+		DECLARE outXMLRef REFERENCE TO outRootRef.XMLNSC;
+		DECLARE soapEnvRef REFERENCE TO outXMLRef.*:Envelope;
+		DECLARE bodyRef REFERENCE TO soapEnvRef.*:Body;
+		
+		CREATE LASTCHILD OF bodyRef NAMESPACE ns1 NAME 'RequestMessage';
+		DECLARE requestMessageRef REFERENCE TO bodyRef.*:RequestMessage;
+
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns1 = ns1;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns6 = ns6;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns7 = ns7;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns8 = ns8;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns2 = ns2;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns3 = ns3;
+		SET requestMessageRef.(XMLNSC.NamespaceDecl)xmlns:ns4 = ns4;	
+		
+		CALL header(requestMessageRef, dateIssued, messageID, correlationID);
+		
+		CREATE LASTCHILD OF requestMessageRef NAMESPACE ns1 NAME 'Request';
+		DECLARE requestRef REFERENCE TO requestMessageRef.*:Request;
+		CREATE LASTCHILD OF requestRef  NAMESPACE ns1 NAME 'Option' VALUE 'OnDemand';
+		
+		CALL payload(requestMessageRef, meterNo, status);
+	END;	
+	
+	CREATE FUNCTION header(INOUT requestMessageRef REFERENCE, INOUT dateIssued CHARACTER, INOUT messageID CHARACTER, INOUT correlationID CHARACTER)
+	BEGIN
+		--set the namespace of the message tree
+		CREATE LASTCHILD OF requestMessageRef NAMESPACE ns1 NAME 'Header';
+		DECLARE headerRef REFERENCE TO requestMessageRef.*:Header;
+		
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'Verb' VALUE 'create';
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'Noun' VALUE 'EndDeviceControls';
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'Revision' VALUE '1.4';
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'Timestamp' VALUE CURRENT_TIMESTAMP;
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'Source' VALUE 'PEMS';
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'ReplyAddress' VALUE UDP_REPLY_ADDRESS;
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'MessageID' VALUE messageID;
+		CREATE LASTCHILD OF headerRef  NAMESPACE ns1 NAME 'CorrelationID' VALUE correlationID;	
+	END;	
+	
+	CREATE FUNCTION payload(INOUT requestMessageRef REFERENCE, INOUT meterNo CHARACTER, INOUT status CHARACTER)
+	BEGIN
+		DECLARE statusValue CHARACTER;
+		
+		CREATE LASTCHILD OF requestMessageRef NAMESPACE ns1 NAME 'Payload';
+		
+		DECLARE payloadRef REFERENCE TO requestMessageRef.*:Payload;
+		CREATE LASTCHILD OF payloadRef NAMESPACE ns5 NAME 'EndDeviceControls';
+		
+		DECLARE endDeviceControlsRef REFERENCE TO payloadRef.*:EndDeviceControls;
+		SET endDeviceControlsRef.(XMLNSC.NamespaceDecl)xmlns:ns5 = ns5;
+		CREATE LASTCHILD OF endDeviceControlsRef NAMESPACE ns5 NAME 'EndDeviceControl';
+
+		DECLARE endDeviceControlRef REFERENCE TO endDeviceControlsRef.*:EndDeviceControl;
+		
+		IF status = 'PSTD' THEN
+			SET statusValue = '3.31.6.42';
+		ELSEIF status = 'PSSP' THEN
+			SET statusValue = '3.31.6.68.1';
+		END IF;		
+		
+		CREATE LASTCHILD OF endDeviceControlRef NAMESPACE ns5 NAME 'type' VALUE statusValue;
+		
+		CREATE LASTCHILD OF endDeviceControlRef NAMESPACE ns5 NAME 'EndDeviceAsset';
+		
+		DECLARE endDeviceAssetRef REFERENCE TO endDeviceControlRef.*:EndDeviceAsset;
+		CREATE LASTCHILD OF endDeviceAssetRef NAMESPACE ns5 NAME 'mRID' VALUE meterNo;
+	END;	
+	
+	CREATE FUNCTION encloseToSoapEnv(INOUT outRootRef REFERENCE)
+	BEGIN
+		CREATE LASTCHILD OF outRootRef DOMAIN 'XMLNSC' NAME 'XMLNSC';
+		
+		DECLARE outXMLRef REFERENCE TO outRootRef.XMLNSC;
+		CREATE LASTCHILD OF outXMLRef NAMESPACE soapenv NAME 'Envelope';
+		
+		DECLARE soapEnvRef REFERENCE TO outXMLRef.*:Envelope;
+		SET soapEnvRef.(XMLNSC.NamespaceDecl)xmlns:soapenv = soapenv;
+		
+		CREATE LASTCHILD OF soapEnvRef NAMESPACE soapenv NAME 'Header';
+		CREATE LASTCHILD OF soapEnvRef NAMESPACE soapenv NAME 'Body';
+	END;	
+	
+
+END MODULE;
